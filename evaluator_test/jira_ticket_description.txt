@@ -1,0 +1,171 @@
+Jira Ticket: Configuration Management APIs
+
+Nov 5, 2026 · @faisal
+
+Ticket details
+
+  -----------------------------------------------------------------------------------------------------------------
+  Field           Value
+  --------------- -------------------------------------------------------------------------------------------------
+  Type            Story
+
+  Title           Implement Configuration Management APIs (Create, Read, Update, Delete) for Track Configurations
+
+  Priority        Medium
+
+  Component       Backend / Configuration Module
+
+  Labels          backend, nodejs, sequelize, configuration, geofence, crud
+  -----------------------------------------------------------------------------------------------------------------
+
+Description and scope
+
+Implement REST controller handlers that let an authenticated user manage their own track configurations. A configuration links a user to a track (TrackImage) and holds a name, a direction and optional polygons; it can also have associated geofences (GeoFence). Every operation is scoped to the logged-in user (req.user.id), so users can only access their own configurations.
+
+Files and modules involved
+
+-   Controller: configuration controller, exporting addNewConfiguration, getAllConfigurations, getSingleConfiguration, deleteConfiguration, updateConfiguration
+
+-   Models: Configuration, TrackImage, GeoFence
+
+-   Utilities: ApiResponse, ApiError, http-status-codes
+
+Functional requirements
+
+1. Add new configuration
+
+-   Accepts trackId, configurationName, direction (required) and polygons (optional) in the request body.
+
+-   Returns 400 Bad Request ("All Fields are required") if trackId, configurationName or direction is missing.
+
+-   Creates the record with userId taken from the authenticated user (req.user.id).
+
+-   Returns 200 OK with { status: "Config Added successfully" }.
+
+2. Get all configurations
+
+-   Returns all configurations belonging to the authenticated user.
+
+-   Each configuration includes its associated track (track) and geofences (geoFences).
+
+-   Returns 404 Not Found ("Configuration Not Found") if the user has no configurations.
+
+-   Returns 200 OK with the list on success.
+
+3. Get single configuration
+
+-   Accepts configurationId as a URL param.
+
+-   Finds the configuration matching both configurationId and userId, including its associated track (track).
+
+-   Returns 404 Not Found if no match exists, 200 OK with the configuration otherwise.
+
+4. Update configuration
+
+-   Accepts configurationId as a URL param and configurationName, polygons, direction in the body.
+
+-   Updates only if the configuration belongs to the authenticated user.
+
+-   Returns 404 Not Found if no rows were updated, 200 OK with { status: "Configutration updated successfully" } otherwise.
+
+5. Delete configuration
+
+-   Accepts configurationId as a URL param.
+
+-   Deletes only if the configuration belongs to the authenticated user.
+
+-   Returns 404 Not Found if nothing was deleted, 200 OK with { status: "Configutration deleted successfully" } otherwise.
+
+Non-functional requirements
+
+-   All handlers use try/catch and forward errors via next(error) to the global error handler.
+
+-   Responses use the ApiResponse.result wrapper; errors use ApiError with standard HTTP status codes.
+
+-   Every query is filtered by userId to enforce data isolation between users.
+
+-   Endpoints sit behind the authentication middleware, so req.user is always populated.
+
+Acceptance criteria
+
+-   ☐ POST create returns 200 and persists the configuration with the correct userId when all required fields are provided.
+
+-   ☐ POST create returns 400 when trackId, configurationName or direction is missing.
+
+-   ☐ GET all returns only the authenticated user's configurations, with track and geoFences included.
+
+-   ☐ GET all returns 404 when the user has no configurations.
+
+-   ☐ GET single returns the configuration with its track for the owner, and 404 for a non-existent ID or another user's configuration.
+
+-   ☐ PUT/PATCH update modifies configurationName, polygons and direction for the owner, and returns 404 otherwise.
+
+-   ☐ DELETE removes the configuration for the owner, and returns 404 otherwise.
+
+-   ☐ A user cannot read, update or delete another user's configuration.
+
+-   ☐ Unhandled errors are passed to the error-handling middleware.
+
+Suggested sub-tasks
+
+-   ☐ Define or verify the Configuration model and its associations (track, geoFences).
+
+-   ☐ Implement addNewConfiguration with required-field validation.
+
+-   ☐ Implement getAllConfigurations with eager loading.
+
+-   ☐ Implement getSingleConfiguration.
+
+-   ☐ Implement updateConfiguration.
+
+-   ☐ Implement deleteConfiguration.
+
+-   ☐ Register routes and apply the auth middleware.
+
+-   ☐ Write unit and integration tests for each endpoint (success, validation failure, not found, cross-user access).
+
+-   ☐ Add API documentation (Swagger or Postman).
+
+-   ☐ Complete code review and QA verification.
+
+Technical notes and improvement suggestions
+
+None of these block the ticket; address them during implementation or as follow-ups.
+
+-   Typos: "Configutration" should be "Configuration" in the update and delete responses. The model import ../models/configration.js also looks misspelled.
+
+-   Unused variable: configuration in addNewConfiguration is never used. Consider returning the created record, including its ID, in the response.
+
+-   Track validation: Verify that trackId exists (and belongs to the user, if applicable) before creating the configuration.
+
+-   Input validation: Validate the structure and type of polygons and direction, for example with allowed enum values.
+
+-   Update safety: update passes undefined for omitted fields. Build the payload only from provided fields so partial updates don't overwrite data.
+
+-   Empty list handling: getAllConfigurations returns 404 when the list is empty. Returning 200 with an empty array is generally more RESTful; confirm the expected behavior with the frontend.
+
+-   Consistent includes: getSingleConfiguration includes track but not geoFences, unlike the list endpoint. Confirm whether this is intentional.
+
+-   Cascade delete: Confirm whether deleting a configuration should also delete its geofences (onDelete: CASCADE or a manual cleanup).
+
+-   Pagination: Consider pagination for getAllConfigurations if the dataset can grow.
+
+Testing notes and definition of done
+
+Testing notes
+
+-   Test with two different users to confirm data isolation.
+
+-   Test with missing, invalid and boundary inputs.
+
+-   Test a configuration with no geofences and one with several.
+
+Definition of done
+
+-   ☐ Code merged to the main branch after peer review.
+
+-   ☐ Unit and integration tests passing.
+
+-   ☐ API documentation updated.
+
+-   ☐ QA sign-off on all acceptance criteria.
