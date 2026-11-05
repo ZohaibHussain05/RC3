@@ -39,6 +39,69 @@ const userRegisteration = async (req, res, next) => {
     token: confirmationToken
   });
 
+  if (userData) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SIGNUP_EMAIL,
+        pass: process.env.SIGNUP_EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.SIGNUP_EMAIL,
+      to: email,
+      subject: 'DevTrak Account Creation Request',
+      html: `
+        <p>Hello,</p>
+        <br />
+        <p>Thank you for signing up with us!</p>
+        <p>To complete your registration, please use the following confirmation code:</p>
+        <br />
+        <h2 style="background-color: #f0f0f0; padding: 10px; text-align: center;">${confirmationToken}</h2>
+        <br />
+        <p>If you didn't sign up for our service, please ignore this email.</p>
+        <br />
+        <p>Best regards,<br>DevTrak Team</p>
+      `
+    };
+
+    transporter.sendMail(mailOptions);
+    ApiResponse.result(res, { status: "User Registered successfully" }, httpStatusCodes.OK);
+  } else {
+    throw new ApiError(
+      httpStatusCodes.BAD_REQUEST,
+      "User data is not valid",
+      httpStatusCodes.BAD_REQUEST
+    );
+  }
+};
+
+const validateConfirmationToken = async (req, res) => {
+  const { email, token } = req.body;
+
+  const user = await User.findOne({ where: { email } });
+
+  if (!user) {
+    throw new ApiError(
+      httpStatusCodes.INTERNAL_SERVER_ERROR,
+      "No user exists with this email",
+      httpStatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  if (user.token !== token) {
+    throw new ApiError(
+      httpStatusCodes.INTERNAL_SERVER_ERROR,
+      "Token is not valid",
+      httpStatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  await user.update({ token: null });
+
+  ApiResponse.result(res, { status: "Email verification successful" }, httpStatusCodes.OK);
+};
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
